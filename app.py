@@ -91,8 +91,8 @@ def main():
         key = cv.waitKey(10)
         if key == 27:  # ESC
             break
-        number, mode = select_mode(key, mode)
-
+        number, mode = select_mode(key, mode, keypoint_classifier_labels)
+        
         # Camera capture #####################################################
         ret, image = cap.read()
         if not ret:
@@ -188,8 +188,7 @@ def main():
                     pre_processed_landmark_list = pre_process_landmark(landmark_list)
 
                     # Write to the dataset file
-                    logging_csv(number, mode, pre_processed_landmark_list)
-
+                    logging_csv(number, mode, pre_processed_landmark_list, keypoint_classifier_labels)
                     # Hand sign classification
                     hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
 
@@ -206,7 +205,7 @@ def main():
                         keypoint_classifier_labels[hand_sign_id],
                     )
 
-            debug_image = draw_info(debug_image, fps, mode, number)
+            debug_image = draw_info(debug_image, fps, mode, number, keypoint_classifier_labels)
 
             # Screen reflection #############################################################
             cv.imshow("Hand Gesture Recognition", debug_image)
@@ -214,17 +213,39 @@ def main():
     cap.release()
     cv.destroyAllWindows()
 
-
-def select_mode(key, mode):
+def select_mode(key, mode, labels):
     number = -1
-    if 65 <= key <= 90:  # A ~ B
+
+    # Letras A-Z
+    if 65 <= key <= 90:
         number = key - 65
-    if key == 110:  # n (Inference Mode)
+
+    # Palavra “EU” (tecla 1)
+    if key == ord("1"):
+        if "EU" in labels:
+            number = labels.index("EU")
+    # Palavra "GOSTO" (tecla 2)
+    if key == ord("2"):
+        if "GOSTO" in labels:
+            number = labels.index("GOSTO") 
+    # Palavra "VOCÊ" (tecla 3)
+    if key == ord("3"):
+        if "VOCÊ" in labels:
+            number = labels.index("VOCÊ")
+
+    # Mode select
+    if key == ord('n'):
         mode = 0
-    if key == 107:  # k (Capturing Landmark From Camera Mode)
+    elif key == ord('k'):
         mode = 1
-    if key == 100:  # d (Capturing Landmarks From Provided Dataset Mode)
+    elif key == ord('d'):
         mode = 2
+    else:
+        try:
+            mode
+        except:
+            mode = 0
+
     return number, mode
 
 
@@ -288,16 +309,25 @@ def pre_process_landmark(landmark_list):
     return temp_landmark_list
 
 
-def logging_csv(number, mode, landmark_list):
+def logging_csv(number, mode, landmark_list, labels):
+    import os
     if mode == 0:
-        pass
-    if (mode == 1 or mode == 2) and (0 <= number <= 35):
-        csv_path = "model/keypoint_classifier/keypoint.csv"
-        with open(csv_path, "a", newline="") as f:
+        return
+
+    if not (0 <= number < len(labels)):
+        # número inválido -> não grava
+        print(f"Skip saving: invalid label index {number}")
+        return
+
+    csv_path = "model/keypoint_classifier/keypoint.csv"
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    try:
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow([number, *landmark_list])
-    return
-
+        print(f"Saved sample -> label: {labels[number]} (index {number})")
+    except Exception as e:
+        print("Erro ao gravar CSV:", e)
 
 def draw_landmarks(image, landmark_point):
     if len(landmark_point) > 0:
@@ -602,7 +632,7 @@ def draw_info_text(image, brect, handedness, hand_sign_text):
     return image
 
 
-def draw_info(image, fps, mode, number):
+def draw_info(image, fps, mode, number, labels):
     cv.putText(
         image,
         "FPS:" + str(fps),
@@ -650,6 +680,18 @@ def draw_info(image, fps, mode, number):
                 1,
                 cv.LINE_AA,
             )
+        if 0 <= number < len(labels):
+            cv.putText(
+                image,
+                "LABEL: " + labels[number],
+                (10, 110),
+            cv.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 255, 255),
+                1,
+            cv.LINE_AA
+    )
+
     return image
 
 
