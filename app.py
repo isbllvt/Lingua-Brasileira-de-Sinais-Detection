@@ -216,22 +216,32 @@ def main():
 def select_mode(key, mode, labels):
     number = -1
 
+    # Nenhuma tecla pressionada
+    if key == -1:
+        return -1, mode  
+
     # Letras A-Z
     if 65 <= key <= 90:
         number = key - 65
 
     # Palavra “EU” (tecla 1)
-    if key == ord("1"):
+    elif key == ord("1"):
         if "EU" in labels:
             number = labels.index("EU")
+
     # Palavra "GOSTO" (tecla 2)
-    if key == ord("2"):
+    elif key == ord("2"):
         if "GOSTO" in labels:
             number = labels.index("GOSTO") 
+
     # Palavra "VOCÊ" (tecla 3)
-    if key == ord("3"):
+    elif key == ord("3"):
         if "VOCÊ" in labels:
             number = labels.index("VOCÊ")
+
+    elif key == ord("4"):
+        if "PALMAS" in labels:
+            number = labels.index("PALMAS")
 
     # Mode select
     if key == ord('n'):
@@ -240,11 +250,6 @@ def select_mode(key, mode, labels):
         mode = 1
     elif key == ord('d'):
         mode = 2
-    else:
-        try:
-            mode
-        except:
-            mode = 0
 
     return number, mode
 
@@ -311,11 +316,15 @@ def pre_process_landmark(landmark_list):
 
 def logging_csv(number, mode, landmark_list, labels):
     import os
+
     if mode == 0:
         return
 
+    # Impede spam infinito
+    if number == -1:
+        return   # <── remove o print!
+
     if not (0 <= number < len(labels)):
-        # número inválido -> não grava
         print(f"Skip saving: invalid label index {number}")
         return
 
